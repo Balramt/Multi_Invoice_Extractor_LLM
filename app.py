@@ -1,33 +1,34 @@
 from dotenv import load_dotenv
-
-
+# Load environment variables from .env file
+load_dotenv()  # take environment variables from .env.
 import streamlit as st
 import os
+import pathlib
+import textwrap
 from PIL import Image
+
 import google.generativeai as genai
 
-# Load environment variables from .env file
-load_dotenv()
-
-
 # Configure Google AI with API key from environment variables
+os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-# Function to load Gemini Pro Version
-model = genai.GenerativeModel('gemini_pro_vision')
 
-def get_gemini_response(input_text, image_parts, prompt):
-    response = model.generate_content([input_text, image_parts[0], prompt])
+## Function to load OpenAI model and get respones
+
+def get_gemini_response(input, image, prompt):
+    model = genai.GenerativeModel('gemini-pro-vision')
+    response = model.generate_content([input, image[0], prompt])
     return response.text
-
-def input_image_details(uploaded_file):
+def input_image_setup(uploaded_file):
+    # Check if a file has been uploaded
     if uploaded_file is not None:
         # Read the file into bytes
-        bytes_data = uploaded_file.read()
+        bytes_data = uploaded_file.getvalue()
 
         image_parts = [
             {
-                "mime_type": uploaded_file.type,  # get the mime type of uploaded file
+                "mime_type": uploaded_file.type,  # Get the mime type of the uploaded file
                 "data": bytes_data
             }
         ]
@@ -37,33 +38,33 @@ def input_image_details(uploaded_file):
 
 
 
-# Initialize the Streamlit app
-st.set_page_config(page_title="Multi Language Invoice Extractor")
-st.header("Multi Language Invoice Extractor")
 
-# User input prompt
-input_prompt = """
-You are an expert in understanding invoices. Upload an image of an invoice and ask any questions based on the uploaded invoice image.
-"""
-# Input fields
-input_text = st.text_input("Input Prompt: ", key="input")
-uploaded_file = st.file_uploader("Choose an image of invoice", type=["jpg", "jpeg", "png"])
+##initialize our streamlit app
+
+st.set_page_config(page_title="Gemini Image Demo")
+
+st.header("Gemini Application")
+input = st.text_input("Input Prompt: ", key="input")
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+image = ""
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+    st.image(image, caption="Uploaded Image.", use_column_width=True)
 
-# Submit button
-submit = st.button("Tell me about the invoice")
+submit = st.button("Tell me about the image")
 
-# If submit button is clicked
+input_prompt = """
+               You are an expert in understanding invoices.
+               You will receive input images as invoices &
+               you will have to answer questions based on the input image
+               """
+
+## If ask button is clicked
 
 if submit:
-    try:
-        image_data= input_image_details(uploaded_file)
-        response = get_gemini_response(input_prompt,image_data, input)
-        st.subheader("The response is")
-        st.write(response)
-    except FileNotFoundError as e:
-        st.error(str(e))
-
+    image_data = input_image_setup(uploaded_file)
+    #response = get_gemini_response(input_prompt, image_data, input) Both are working
+    response = get_gemini_response(input, image_data, input_prompt)
+    st.subheader("The Response is")
+    st.write(response)
 
